@@ -1,0 +1,33 @@
+name: Sync Production branch to Staging
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+      timezone: 'Europe/London'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Master
+      uses: actions/checkout@v2
+      with:
+        ref: master
+
+    - name: Fetch branches
+      run: git fetch origin
+
+    - name: Checkout Staging
+      run: git checkout staging
+
+    - name: Sync to Staging
+      run: |
+        git merge origin/master
+        if [ $? -ne 0 ]; then
+          echo "Conflict detected, resolving..."
+          git checkout --theirs .
+          git add .
+          git commit -m "Resolve merge conflict"
+        fi
+        git push origin staging

@@ -1,0 +1,53 @@
+name: Laravel Unit and Security Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+      - staging
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup PHP 8.1
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+
+    - name: Restore composer cache
+      uses: actions/cache@v2
+      id: composer-cache
+      with:
+        path: '/vendor'
+        key: php-${{ hashFiles('composer.lock') }}
+        restore-keys: |
+          php-${{ hashFiles('composer.lock') }}
+
+    - name: Install Dependencies
+      run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
+    - name: Setup application
+      run: |
+          php -r "copy('.env.example', '.env');"
+          php artisan key:generate
+          
+    - name: Save composer cache
+      uses: actions/cache@v2
+      with:
+        path: vendor
+        key: php-${{ hashFiles('composer.lock') }}
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+    - name: Execute tests (Unit and Feature tests) via PHPUnit
+      run: vendor/bin/phpunit
+
+    - name: Code check using PHPCS
+      run: composer run test
+      
+    - name: Install Package security checker
+      run: composer require --dev enlightn/laravel-security-checker
+
+    - name: Run security check
+      run: php artisan security:check
